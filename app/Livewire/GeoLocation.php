@@ -14,7 +14,7 @@ class GeoLocation extends Component
     public $latitude;
     public $longitude;
     public $address;
-    public function fetchLocation()
+    public function fetchLocationByIp()
     {
         if (filter_var($this->ip, FILTER_VALIDATE_IP)) {
             $response = Http::withOptions(['verify' => false])->get("https://get.geojs.io/v1/ip/geo/{$this->ip}.json");
@@ -42,38 +42,9 @@ class GeoLocation extends Component
 
     
     }
-    public function fetchLocationByAddress($address)
-    {
-        $response = Http::withOptions(['verify' => false])->withHeaders([
-            'x-rapidapi-host' => 'geocode-address-to-location.p.rapidapi.com',
-            'x-rapidapi-key' => '89d0a57d18msh2ef5e1739b44b3dp134042jsndb9b2ce7e901',
-        ])->get('https://geocode-address-to-location.p.rapidapi.com/v1/geocode/autocomplete', [
-            'text' => $address,
-            'type' => 'city',
-            'lon' => 13.38,
-            'lat' => 52.51,
-            'limit' => 1,
-            'countrycodes' => 'de',
-            'lang' => 'fr',
-        ]);
-
-        if ($response->successful()) {
-            $result = $response->json();
-            if (!empty($result['features'])) {
-                $coordinates = $result['features'][0]['geometry']['coordinates'];
-                $this->latitude = $coordinates[1];
-                $this->longitude = $coordinates[0];
-                $this->dispatch('location-updated', $this->latitude, $this->longitude);
-            } else {
-                $this->addError('address', 'Adresse physique non trouvée.');
-            }
-        } else {
-            $this->addError('address', 'Erreur lors de la récupération de la géolocalisation par adresse physique.');
-        }
-    }
     // public function fetchLocationByAddress($address)
     // {
-    //     $response = Http::withHeaders([
+    //     $response = Http::withOptions(['verify' => false])->withHeaders([
     //         'x-rapidapi-host' => 'geocode-address-to-location.p.rapidapi.com',
     //         'x-rapidapi-key' => '89d0a57d18msh2ef5e1739b44b3dp134042jsndb9b2ce7e901',
     //     ])->get('https://geocode-address-to-location.p.rapidapi.com/v1/geocode/autocomplete', [
@@ -92,7 +63,7 @@ class GeoLocation extends Component
     //             $coordinates = $result['features'][0]['geometry']['coordinates'];
     //             $this->latitude = $coordinates[1];
     //             $this->longitude = $coordinates[0];
-    //             $this->dispatch('location-updated',$this->latitude, $this->longitude);
+    //             $this->dispatch('location-updated', $this->latitude, $this->longitude);
     //         } else {
     //             $this->addError('address', 'Adresse physique non trouvée.');
     //         }
@@ -100,14 +71,80 @@ class GeoLocation extends Component
     //         $this->addError('address', 'Erreur lors de la récupération de la géolocalisation par adresse physique.');
     //     }
     // }
+    public function fetchLocationByAddress($address)
+    {
+        $response = Http::withOptions(['verify' => false])->withHeaders([
+                    'x-rapidapi-host' => 'google-maps-geocoding.p.rapidapi.com',
+                    'x-rapidapi-key' => '89d0a57d18msh2ef5e1739b44b3dp134042jsndb9b2ce7e901',
+                ])->get('https://google-maps-geocoding.p.rapidapi.com/geocode/json', [
+                    'language' => 'fr',
+                    'address' => $this->address,
+                ]);
 
-    public function submit()
+     
+    if ($response->successful()) {
+        $result = $response->json();
+        if (!empty($result['results'])) {
+            $location = $result['results'][0]['geometry']['location'];
+            $this->latitude = $location['lat'];
+            $this->longitude = $location['lng'];
+            $this->dispatch('location-updated', $this->latitude, $this->longitude);
+        } else {
+            $this->addError('address', 'Adresse physique non trouvée dans Google Maps.');
+        }
+    } else {
+        $this->addError('address', 'Erreur lors de la récupération de la géolocalisation par adresse physique (Google Maps).');
+    }
+    }
+ 
+    // public function fetchLocationByAddress()
+    // {
+    //     // Valider si l'adresse est vide
+    //     if (empty($this->address)) {
+    //         $this->addError('address', 'Veuillez saisir une adresse physique.');
+    //         return;
+    //     }
+
+    //     // Requête vers l'API de geocoding de Google Maps
+    //     $response = Http::withOptions(['verify' => false])->withHeaders([
+    //         'x-rapidapi-host' => 'google-maps-geocoding.p.rapidapi.com',
+    //         'x-rapidapi-key' => '89d0a57d18msh2ef5e1739b44b3dp134042jsndb9b2ce7e901',
+    //     ])->get('https://google-maps-geocoding.p.rapidapi.com/geocode/json', [
+    //         'language' => 'fr',
+    //         'address' => $this->address,
+    //     ]);
+
+    //     if ($response->successful()) {
+    //         $result = $response->json();
+    //         if (!empty($result['results'])) {
+    //             $location = $result['results'][0]['geometry']['location'];
+    //             $this->latitude = $location['lat'];
+    //             $this->longitude = $location['lng'];
+    //             $this->dispatch('location-updated', $this->latitude, $this->longitude);
+    //         } else {
+    //             $this->addError('address', 'Adresse physique non trouvée dans Google Maps.');
+    //         }
+    //     } else {
+    //         $this->addError('address', 'Erreur lors de la récupération de la géolocalisation par adresse physique (Google Maps).');
+    //     }
+    // }
+
+ 
+    public function submitIp()
     {
         // Vérifier si l'utilisateur a saisi une adresse IP ou une adresse physique
-        if ($this->ip && filter_var($this->ip, FILTER_VALIDATE_IP)) {
+        if ($this->ip) {
             // Si c'est une adresse IP valide, appeler fetchLocation avec l'adresse IP
-            $this->fetchLocation($this->ip);
-        } elseif ($this->address) {
+            $this->fetchLocationByIp();
+        } else {
+            // Afficher un message d'erreur si aucune adresse n'est saisie
+            $this->addError('ip', 'Veuillez saisir une adresse IP valide ou une adresse physique.');
+        }
+    }
+    public function submitAddress()
+    {
+       
+        if ($this->address) {
             // Si c'est une adresse physique, appeler fetchLocation avec l'adresse physique
             $this->fetchLocationByAddress($this->address);
         } else {

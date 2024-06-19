@@ -1,22 +1,40 @@
-<div class="max-w-3xl mx-auto bg-white shadow-lg rounded-lg p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Colonne gauche : Formulaire -->
+    <div>
+        <h1 class="text-2xl font-bold mb-4">Géolocalisation</h1>
 
-    <!-- Colonne gauche : Formulaire de géolocalisation -->
-    <div class="space-y-6">
-        <h1 class="text-2xl font-bold">Géolocalisation</h1>
-
-        <form wire:submit.prevent="submit">
-            <div>
+        <!-- Formulaire -->
+        <form wire:submit.prevent="submit" class="mb-4">
+            <div class="mb-4">
                 <label for="ip" class="block text-sm font-medium text-gray-700">Adresse IP :</label>
                 <input type="text" id="ip" wire:model="ip"
                     class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
             </div>
-
+            <div class="mb-4">
+                <label for="address" class="block text-sm font-medium text-gray-700">Adresse physique :</label>
+                <input type="text" id="address" wire:model="address"
+                    class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
             <button type="submit"
-                class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Soumettre</button>
+                class="px-4 py-2 bg-blue-500 text-white rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Soumettre</button>
         </form>
 
+        <!-- Messages d'erreur -->
+        @if ($errors->any())
+            <div class="bg-red-100 p-4 rounded-md mb-4">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li class="text-sm text-red-700">{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
+
+    <!-- Colonne droite : Résultats -->
+    <div>
         @if ($location)
-            <div class="bg-gray-100 p-4 rounded-md">
+            <div class="bg-gray-100 p-4 rounded-md mb-4">
                 @if (isset($location['timezone']))
                     <p><strong>Timezone:</strong> {{ $location['timezone'] }}</p>
                 @endif
@@ -45,17 +63,21 @@
                     <p><strong>ASN:</strong> {{ $location['asn'] }}</p>
                 @endif
             </div>
-        @elseif ($ip && !filter_var($ip, FILTER_VALIDATE_IP))
+        @elseif($ip && !filter_var($ip, FILTER_VALIDATE_IP))
             <div class="bg-red-100 p-4 rounded-md">
                 <p>Adresse IP invalide.</p>
             </div>
+        @elseif($address)
+            <div class="bg-red-100 p-4 rounded-md">
+                <p>Adresse physique non trouvée.</p>
+            </div>
         @endif
+
+        <!-- Carte -->
+        <div id="map" style="height: 400px;" wire:ignore></div>
     </div>
-
-    <!-- Colonne droite : Carte de géolocalisation -->
-    <div id="map" class="h-96 rounded-lg overflow-hidden" wire:ignore></div>
-
 </div>
+
 
 @push('scripts')
 <script>
